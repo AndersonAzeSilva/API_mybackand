@@ -11,11 +11,17 @@
   "dependencies": {
     "expo": "~51.0.28",
     "expo-status-bar": "~1.12.1",
+    "express": "^4.21.0",
+    "mysql2": "^3.11.3",
     "react": "18.2.0",
     "react-native": "0.74.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
   },
-  "private": true
+  "private": true,
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
