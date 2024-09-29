@@ -9,16 +9,35 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/html-elements": "^0.10.1",
+    "@react-native-google-signin/google-signin": "^13.1.0",
+    "@react-navigation/drawer": "^6.7.2",
     "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "expo": "~51.0.28",
+    "expo-auth-session": "~5.5.2",
+    "expo-crypto": "~13.0.2",
+    "expo-image-picker": "~15.0.7",
+    "expo-notifications": "~0.28.17",
     "expo-status-bar": "~1.12.1",
     "express": "^4.21.0",
+    "google-auth-library": "^9.14.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql": "^2.18.1",
     "mysql2": "^3.11.3",
+    "nodemailer": "^6.9.15",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "react": "18.2.0",
-    "react-native": "0.74.5"
+    "react-native": "0.74.5",
+    "socket.io": "^4.8.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "nodemon": "^3.1.7"
   },
   "private": true,
   "keywords": [],
