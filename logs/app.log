@@ -40,3 +40,4 @@
 2024-09-29T18:47:19.539Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'type' in 'field list'
 2024-09-29T18:50:09.814Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'images' in 'field list'
 2024-09-29T19:34:21.638Z - Falha de login: Email não encontrado - teste@gmail.com.com
+2024-09-29T22:58:11.126Z - Erro ao registrar usuário: Duplicate entry 'teste@gmail.com' for key 'email'
