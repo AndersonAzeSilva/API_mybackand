@@ -245,6 +245,15 @@ app.delete('/chamados/:id', async (req, res) => {
   }
 });
 
+// Rota para logout
+app.post('/logout', (req, res) => {
+  // Para invalidar o token no lado do cliente, você pode remover o token do armazenamento local
+  // Exemplo: Se você estiver usando JWT, você deve fazer isso no front-end
+
+  // Aqui, apenas respondemos que o logout foi bem-sucedido
+  res.json({ message: 'Logout realizado com sucesso!' });
+});
+
 // Inicia o servidor
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);

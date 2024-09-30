@@ -41,3 +41,9 @@
 2024-09-29T18:50:09.814Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'images' in 'field list'
 2024-09-29T19:34:21.638Z - Falha de login: Email não encontrado - teste@gmail.com.com
 2024-09-29T22:58:11.126Z - Erro ao registrar usuário: Duplicate entry 'teste@gmail.com' for key 'email'
+2024-09-30T12:17:22.511Z - Erro ao conectar no banco de dados: 
+2024-09-30T16:55:31.125Z - Servidor rodando na porta 3000
+2024-09-30T17:30:44.148Z - Falha de login: Email não encontrado - teste@admin.com
+2024-09-30T20:10:27.362Z - Falha de login: Email não encontrado - teste@tes.com
+2024-09-30T20:16:50.562Z - Falha de login: Senha incorreta para o email - andersonazesilva@gmail.com
+2024-09-30T20:17:00.921Z - Falha de login: Senha incorreta para o email - andersonazesilva@gmail.com
