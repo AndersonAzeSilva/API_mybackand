@@ -47,3 +47,7 @@
 2024-09-30T20:10:27.362Z - Falha de login: Email não encontrado - teste@tes.com
 2024-09-30T20:16:50.562Z - Falha de login: Senha incorreta para o email - andersonazesilva@gmail.com
 2024-09-30T20:17:00.921Z - Falha de login: Senha incorreta para o email - andersonazesilva@gmail.com
+2024-10-01T16:49:14.992Z - Erro ao conectar no banco de dados: 
+2024-10-01T16:49:31.058Z - Erro ao conectar no banco de dados: 
+2024-10-01T19:18:43.491Z - Falha de login: Email não encontrado - teste@gmail.com
+2024-10-01T19:57:51.539Z - Erro ao registrar chamado: Unknown column 'titulo' in 'field list'
