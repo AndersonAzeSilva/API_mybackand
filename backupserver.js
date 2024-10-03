@@ -3,6 +3,8 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const { log } = require('./logger'); // Importa a função de log
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client('SEU_CLIENT_ID_AQUI');
 
 const app = express();
 const port = 3000;
@@ -289,8 +291,56 @@ app.get('/export', async (req, res) => {
     res.status(500).json({ error: 'Erro ao exportar ocorrências.' });
   }
 });
+/////////////////////////////////////////////////////////////////////////////////////////
+// Rota para login com Google
+/////////////////////////////////////////////////////////////////////////////////////////
+app.post('/login/google', async (req, res) => {
+  const { id_token } = req.body;
 
+  if (!id_token) {
+      return res.status(400).json({ error: 'Token do Google é obrigatório!' });
+  }
+
+  try {
+      const ticket = await googleClient.verifyIdToken({
+          idToken: id_token,
+          audience: '119836842505-voh13dm2f4t8eb7toll5g3st288sp7gg.apps.googleusercontent.com', // Substitua pelo seu Client ID
+      });
+      const payload = ticket.getPayload();
+      const email = payload.email;
+      const nome = payload.name;
+
+      // Verifica se o usuário já existe no banco de dados
+      const [results] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+
+      if (results.length === 0) {
+          // Se não existir, registra o usuário
+          const sql = 'INSERT INTO usuarios (nome, email, senha, nivel) VALUES (?, ?, ?, ?)';
+          await db.query(sql, [nome, email, null, 2]); // Define o nível como 2 (Usuário normal)
+      }
+
+      // Realiza o login do usuário
+      const [userResults] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+      const user = userResults[0];
+      const isAdmin = user.nivel === 1; // Considera nível 1 como administrador
+
+      res.json({
+          message: 'Login com Google realizado com sucesso!',
+          user: {
+              nome: user.nome,
+              email: user.email,
+              nivel: user.nivel,
+              isAdmin
+          }
+      });
+  } catch (error) {
+      console.error('Erro ao verificar token do Google:', error);
+      return res.status(401).json({ error: 'Token inválido ou expirado.' });
+  }
+});
+//////////////////////////////////////////////////////////////////////////////////////////
 // Inicia o servidor
+////////////////////////////////////////////////////////////////////////////////////////
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
