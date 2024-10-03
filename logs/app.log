@@ -51,3 +51,6 @@
 2024-10-01T16:49:31.058Z - Erro ao conectar no banco de dados: 
 2024-10-01T19:18:43.491Z - Falha de login: Email não encontrado - teste@gmail.com
 2024-10-01T19:57:51.539Z - Erro ao registrar chamado: Unknown column 'titulo' in 'field list'
+2024-10-02T15:07:15.042Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'assignedTo' in 'field list'
+2024-10-02T15:07:43.641Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'assignedTo' in 'field list'
+2024-10-02T15:08:00.707Z - Erro ao registrar ou atualizar ocorrência: Unknown column 'assignedTo' in 'field list'

@@ -34,11 +34,17 @@ initializeDb();
 app.use(express.json());
 app.use(cors());
 
+// Função para validar dados do usuário
+function validateUserData(data) {
+  const { nome, email, senha, cpf, telefone, endereco } = data;
+  return nome && email && senha && cpf && telefone && endereco;
+}
+
 // Rota para registrar um novo usuário
 app.post('/register', async (req, res) => {
   const { nome, email, senha, cpf, telefone, endereco, isAdmin } = req.body;
 
-  if (!nome || !email || !senha || !cpf || !telefone || !endereco) {
+  if (!validateUserData(req.body)) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
   }
 
@@ -110,13 +116,19 @@ app.get('/usuarios', async (req, res) => {
   }
 });
 
+// Função para validar dados de ocorrência
+function validateIncidentData(data) {
+  const { protocolNumber, title, description, type, date, time, status } = data;
+  return protocolNumber && title && description && type && date && time && status;
+}
+
 // Rota para registrar ou atualizar uma ocorrência
 app.post('/incidents', async (req, res) => {
-  const { protocolNumber, title, description, type, date, time, status, images, assignedTo } = req.body;
-
-  if (!protocolNumber || !title || !description || !type || !date || !time || !status) {
+  if (!validateIncidentData(req.body)) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
   }
+
+  const { protocolNumber, title, description, type, date, time, status, images, assignedTo } = req.body;
 
   try {
     const [existing] = await db.query('SELECT * FROM incidents WHERE protocolNumber = ?', [protocolNumber]);
@@ -183,7 +195,7 @@ app.delete('/incidents/:id', async (req, res) => {
 // Rota para criar um chamado
 app.post('/chamados', async (req, res) => {
   const { titulo, descricao, usuarioId } = req.body;
-  
+
   if (!titulo || !descricao) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
   }
@@ -216,8 +228,18 @@ app.put('/chamados/:id', async (req, res) => {
   const { id } = req.params;
   const { titulo, descricao } = req.body;
 
+  if (!titulo || !descricao) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
+  }
+
   try {
-    await db.query('UPDATE chamados SET titulo = ?, descricao = ? WHERE id = ?', [titulo, descricao, id]);
+    const sql = 'UPDATE chamados SET titulo = ?, descricao = ? WHERE id = ?';
+    const [result] = await db.query(sql, [titulo, descricao, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Chamado não encontrado.' });
+    }
+
     res.json({ message: 'Chamado atualizado com sucesso!' });
   } catch (error) {
     console.error('Erro ao atualizar chamado:', error);
@@ -226,12 +248,18 @@ app.put('/chamados/:id', async (req, res) => {
   }
 });
 
-// Rota para deletar um chamado
+// Rota para excluir um chamado
 app.delete('/chamados/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    await db.query('DELETE FROM chamados WHERE id = ?', [id]);
+    const sql = 'DELETE FROM chamados WHERE id = ?';
+    const [result] = await db.query(sql, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Chamado não encontrado.' });
+    }
+
     res.json({ message: 'Chamado excluído com sucesso!' });
   } catch (error) {
     console.error('Erro ao excluir chamado:', error);
@@ -240,23 +268,21 @@ app.delete('/chamados/:id', async (req, res) => {
   }
 });
 
-// Rota para exportar ocorrências
+// Rota para exportar ocorrências para CSV
 app.get('/export', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM incidents');
-    const csvRows = [];
 
-    // Adiciona cabeçalhos
-    csvRows.push('ID,ProtocolNumber,Title,Description,Type,Date,Time,Status,Images,AssignedTo');
-    
-    // Adiciona os dados
-    for (const row of rows) {
-      csvRows.push(`${row.id},${row.protocolNumber},${row.title},${row.description},${row.type},${row.date},${row.time},${row.status},${row.images ? JSON.parse(row.images).join(';') : ''},${row.assignedTo}`);
-    }
+    // Configura o cabeçalho da resposta
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=ocorrencias.csv');
 
-    res.header('Content-Type', 'text/csv');
-    res.attachment('incidents.csv');
-    res.send(csvRows.join('\n'));
+    // Converte os dados para CSV
+    const csv = rows.map(row => {
+      return Object.values(row).join(',');
+    }).join('\n');
+
+    res.send(csv);
   } catch (error) {
     console.error('Erro ao exportar ocorrências:', error);
     log(`Erro ao exportar ocorrências: ${error.message}`);
@@ -264,7 +290,7 @@ app.get('/export', async (req, res) => {
   }
 });
 
-// Inicializa o servidor
+// Inicia o servidor
 app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+  console.log(`Servidor rodando na porta ${port}`);
 });
