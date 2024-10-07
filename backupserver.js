@@ -338,6 +338,16 @@ app.post('/login/google', async (req, res) => {
       return res.status(401).json({ error: 'Token inválido ou expirado.' });
   }
 });
+
+// Rota para logout do usuário
+app.post('/logout', (req, res) => {
+  // Aqui você pode invalidar o token ou a sessão do usuário.
+  // Se estiver usando tokens JWT, você pode optar por armazenar uma lista de tokens inválidos ou alterar o estado da sessão.
+
+  // Para este exemplo, vamos simplesmente responder com uma mensagem de sucesso.
+  res.json({ message: 'Logout realizado com sucesso!' });
+});
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Inicia o servidor
 ////////////////////////////////////////////////////////////////////////////////////////
