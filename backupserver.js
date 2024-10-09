@@ -124,7 +124,7 @@ function validateIncidentData(data) {
   return protocolNumber && title && description && type && date && time && status;
 }
 
-// Rota para registrar ou atualizar uma ocorrência
+// Rota para registrar uma nova ocorrência
 app.post('/incidents', async (req, res) => {
   if (!validateIncidentData(req.body)) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
@@ -133,26 +133,59 @@ app.post('/incidents', async (req, res) => {
   const { protocolNumber, title, description, type, date, time, status, images, assignedTo } = req.body;
 
   try {
+    // Verifica se a ocorrência já existe
     const [existing] = await db.query('SELECT * FROM incidents WHERE protocolNumber = ?', [protocolNumber]);
 
     if (existing.length > 0) {
-      const sql = 'UPDATE incidents SET title = ?, description = ?, type = ?, date = ?, time = ?, status = ?, images = ?, assignedTo = ? WHERE protocolNumber = ?';
-      const values = [title, description, type, date, time, status, JSON.stringify(images), assignedTo, protocolNumber];
-      await db.query(sql, values);
-      return res.status(200).json({ message: 'Ocorrência atualizada com sucesso!' });
-    } else {
-      const sql = 'INSERT INTO incidents (protocolNumber, title, description, type, date, time, status, images, assignedTo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-      const values = [protocolNumber, title, description, type, date, time, status, JSON.stringify(images), assignedTo];
-      await db.query(sql, values);
-      return res.status(201).json({ message: 'Ocorrência registrada com sucesso!', protocolNumber });
+      return res.status(400).json({ error: 'Ocorrência com esse número de protocolo já existe!' });
     }
 
+    const sql = 'INSERT INTO incidents (protocolNumber, title, description, type, date, time, status, images, assignedTo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const values = [protocolNumber, title, description, type, date, time, status, JSON.stringify(images), assignedTo];
+    await db.query(sql, values);
+    return res.status(201).json({ message: 'Ocorrência registrada com sucesso!', protocolNumber });
+
   } catch (error) {
-    console.error('Erro ao registrar ou atualizar ocorrência:', error.message);
-    log(`Erro ao registrar ou atualizar ocorrência: ${error.message}`);
-    return res.status(500).json({ error: 'Erro ao registrar ou atualizar ocorrência no banco de dados.', details: error.message });
+    console.error('Erro ao registrar ocorrência:', error.message);
+    log(`Erro ao registrar ocorrência: ${error.message}`);
+    return res.status(500).json({ error: 'Erro ao registrar ocorrência no banco de dados.', details: error.message });
   }
 });
+
+/// Rota para atualizar uma ocorrência existente
+app.put('/incidents/:protocolNumber', async (req, res) => {
+  const { protocolNumber } = req.params;
+
+  if (!validateIncidentData(req.body)) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
+  }
+
+  const { title, description, type, date, time, status, images, assignedTo } = req.body;
+
+  try {
+    // Verifica se a ocorrência existe
+    const [existing] = await db.query('SELECT * FROM incidents WHERE protocolNumber = ?', [protocolNumber]);
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Ocorrência não encontrada!' });
+    }
+
+    // Atualiza apenas o status se for "encerrado"
+    const newStatus = status.toLowerCase() === 'encerrado' ? 'encerrado' : status;
+
+    const sql = 'UPDATE incidents SET title = ?, description = ?, type = ?, date = ?, time = ?, status = ?, images = ?, assignedTo = ? WHERE protocolNumber = ?';
+    const values = [title, description, type, date, time, newStatus, JSON.stringify(images), assignedTo, protocolNumber];
+    await db.query(sql, values);
+    return res.status(200).json({ message: 'Ocorrência atualizada com sucesso!', status: newStatus });
+
+  } catch (error) {
+    console.error('Erro ao atualizar ocorrência:', error.message);
+    log(`Erro ao atualizar ocorrência: ${error.message}`);
+    return res.status(500).json({ error: 'Erro ao atualizar ocorrência no banco de dados.', details: error.message });
+  }
+});
+
+
 
 // Rota para obter todas as ocorrências
 app.get('/incidents', async (req, res) => {
@@ -275,16 +308,15 @@ app.get('/export', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM incidents');
 
-    // Configura o cabeçalho da resposta
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=ocorrencias.csv');
 
-    // Converte os dados para CSV
+    const header = Object.keys(rows[0]).join(',') + '\n';
     const csv = rows.map(row => {
       return Object.values(row).join(',');
     }).join('\n');
 
-    res.send(csv);
+    res.send(header + csv);
   } catch (error) {
     console.error('Erro ao exportar ocorrências:', error);
     log(`Erro ao exportar ocorrências: ${error.message}`);
@@ -347,6 +379,27 @@ app.post('/logout', (req, res) => {
   // Para este exemplo, vamos simplesmente responder com uma mensagem de sucesso.
   res.json({ message: 'Logout realizado com sucesso!' });
 });
+
+// Rota para atualizar perfil do usuário
+app.put('/users/:id', async (req, res) => {
+  const userId = req.params.id;
+  const { name, email, matricula, profilePicture } = req.body; // Campos a serem atualizados
+
+  if (!name || !email || !matricula) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
+  }
+
+  try {
+    const sql = 'UPDATE users SET name = ?, email = ?, matricula = ?, profilePicture = ? WHERE id = ?';
+    await db.query(sql, [name, email, matricula, profilePicture, userId]);
+    res.status(200).json({ message: 'Perfil atualizado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    log(`Erro ao atualizar perfil: ${error.message}`);
+    res.status(500).json({ error: 'Erro ao atualizar perfil no banco de dados.' });
+  }
+});
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Inicia o servidor
