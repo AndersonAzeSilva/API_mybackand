@@ -152,10 +152,13 @@ app.post('/incidents', async (req, res) => {
   }
 });
 
-/// Rota para atualizar uma ocorrência existente
 app.put('/incidents/:protocolNumber', async (req, res) => {
   const { protocolNumber } = req.params;
 
+  // Lista de status permitidos
+  const validStatuses = ['pendente', 'em andamento', 'encerrado'];
+
+  // Validação dos dados da requisição
   if (!validateIncidentData(req.body)) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
   }
@@ -170,22 +173,44 @@ app.put('/incidents/:protocolNumber', async (req, res) => {
       return res.status(404).json({ error: 'Ocorrência não encontrada!' });
     }
 
-    // Atualiza apenas o status se for "encerrado"
-    const newStatus = status.toLowerCase() === 'encerrado' ? 'encerrado' : status;
+    // Valida se o status fornecido é válido
+    if (!validStatuses.includes(status.toLowerCase())) {
+      return res.status(400).json({ error: `Status inválido! Status permitidos: ${validStatuses.join(', ')}` });
+    }
 
+    // Verifica se o status é "encerrado" e mantém "encerrado" caso já esteja assim
+    const currentStatus = existing[0].status.toLowerCase();
+    const newStatus = currentStatus === 'encerrado' ? 'encerrado' : status.toLowerCase();
+
+    // Só atualiza os dados se houverem mudanças (incluindo o status)
+    const hasChanges = (
+      title !== existing[0].title ||
+      description !== existing[0].description ||
+      type !== existing[0].type ||
+      date !== existing[0].date ||
+      time !== existing[0].time ||
+      newStatus !== currentStatus ||
+      JSON.stringify(images) !== JSON.stringify(existing[0].images) ||
+      assignedTo !== existing[0].assignedTo
+    );
+
+    if (!hasChanges) {
+      return res.status(200).json({ message: 'Nenhuma alteração detectada na ocorrência.' });
+    }
+
+    // Atualiza a ocorrência
     const sql = 'UPDATE incidents SET title = ?, description = ?, type = ?, date = ?, time = ?, status = ?, images = ?, assignedTo = ? WHERE protocolNumber = ?';
     const values = [title, description, type, date, time, newStatus, JSON.stringify(images), assignedTo, protocolNumber];
+    
     await db.query(sql, values);
+    
     return res.status(200).json({ message: 'Ocorrência atualizada com sucesso!', status: newStatus });
 
   } catch (error) {
     console.error('Erro ao atualizar ocorrência:', error.message);
-    log(`Erro ao atualizar ocorrência: ${error.message}`);
     return res.status(500).json({ error: 'Erro ao atualizar ocorrência no banco de dados.', details: error.message });
   }
 });
-
-
 
 // Rota para obter todas as ocorrências
 app.get('/incidents', async (req, res) => {
@@ -400,10 +425,135 @@ app.put('/users/:id', async (req, res) => {
   }
 });
 
+// Rota para criar uma nova secretária
+app.post('/secretaries', async (req, res) => {
+  const { name, email, address, phone, profileImage, availableTimes } = req.body;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Inicia o servidor
-////////////////////////////////////////////////////////////////////////////////////////
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
+  try {
+    // Inserir a secretária na tabela secretaries
+    const [secretaryResult] = await db.execute(
+      'INSERT INTO secretaries (name, email, address, phone, profile_image) VALUES (?, ?, ?, ?, ?)',
+      [name, email, address, phone, profileImage]
+    );
+
+    const secretaryId = secretaryResult.insertId;
+
+    // Inserir os horários disponíveis na tabela available_times
+    for (const time of availableTimes) {
+      await db.execute(
+        'INSERT INTO available_times (secretary_id, start_time, end_time) VALUES (?, ?, ?)',
+        [secretaryId, time.startTime, time.endTime]
+      );
+    }
+
+    res.status(201).json({ id: secretaryId, name, email, address, phone, profileImage });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao cadastrar a secretária' });
+  }
+});
+
+// Rota para listar as secretárias
+app.get('/secretaries', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM secretaries');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao buscar secretárias' });
+  }
+});
+
+// Rota para criar novos horários das secretárias
+app.post('/schedules', async (req, res) => {
+  const { secretary_id, start_time, end_time } = req.body;
+
+  // Validação dos campos
+  if (!secretary_id || !start_time || !end_time) {
+    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+  }
+
+  try {
+    // Verifica se o secretary_id existe
+    const [secretary] = await db.query('SELECT * FROM secretaries WHERE id = ?', [secretary_id]);
+    if (secretary.length === 0) {
+      return res.status(404).json({ message: 'Secretária não encontrada.' });
+    }
+
+    // Inserir o horário no banco de dados
+    await db.query('INSERT INTO schedules (secretary_id, start_time, end_time) VALUES (?, ?, ?)', [secretary_id, start_time, end_time]);
+    res.status(201).json({ message: 'Horário cadastrado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao cadastrar horário:', error);
+    res.status(500).json({ message: 'Erro ao cadastrar horário.' });
+  }
+});
+
+// Rota para listar horários disponíveis de uma secretária em uma data específica
+app.get('/available-times', async (req, res) => {
+  const { date, secretaryId } = req.query;
+
+  if (!date || !secretaryId) {
+    return res.status(400).json({ message: 'Data e ID da secretária são obrigatórios.' });
+  }
+
+  try {
+    const [times] = await db.query(
+      'SELECT start_time, end_time FROM available_times WHERE secretary_id = ? AND DATE(start_time) = ?',
+      [secretaryId, date]
+    );
+    res.status(200).json(times);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao buscar horários disponíveis' });
+  }
+});
+
+// Rota para criar um novo agendamento
+app.post('/appointments', async (req, res) => {
+  const { secretary_id, date, time, email } = req.body;
+
+  if (!secretary_id || !date || !time || !email) {
+    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+  }
+
+  try {
+    // Aqui você deve inserir o agendamento na tabela correspondente
+    await db.query(
+      'INSERT INTO appointments (secretary_id, appointment_date, appointment_time, email) VALUES (?, ?, ?, ?)',
+      [secretary_id, date, time, email]
+    );
+    res.status(201).json({ message: 'Agendamento criado com sucesso!' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao criar agendamento' });
+  }
+});
+
+// Rota para listar as datas disponíveis com horários
+app.get('/available-dates', async (req, res) => {
+  const { secretaryId } = req.query;
+
+  if (!secretaryId) {
+    return res.status(400).json({ message: 'ID da secretária é obrigatório.' });
+  }
+
+  try {
+    const [dates] = await db.query(
+      'SELECT DISTINCT DATE(start_time) as availableDate FROM available_times WHERE secretary_id = ?',
+      [secretaryId]
+    );
+    
+    res.status(200).json(dates.map(row => row.availableDate)); // Retorna uma lista de datas
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao buscar datas disponíveis.' });
+  }
+});
+
+
+// Inicializando o servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
