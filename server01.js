@@ -429,6 +429,11 @@ app.put('/users/:id', async (req, res) => {
 app.post('/secretaries', async (req, res) => {
   const { name, email, address, phone, profileImage, availableTimes } = req.body;
 
+  // Validação dos campos
+  if (!name || !email || !address || !phone || !availableTimes || availableTimes.length === 0) {
+    return res.status(400).json({ message: 'Todos os campos são obrigatórios e horários disponíveis devem ser fornecidos.' });
+  }
+
   try {
     // Inserir a secretária na tabela secretaries
     const [secretaryResult] = await db.execute(
@@ -442,7 +447,7 @@ app.post('/secretaries', async (req, res) => {
     for (const time of availableTimes) {
       await db.execute(
         'INSERT INTO available_times (secretary_id, start_time, end_time) VALUES (?, ?, ?)',
-        [secretaryId, time.startTime, time.endTime]
+        [secretaryId, time.start_time, time.end_time]
       );
     }
 
@@ -481,7 +486,7 @@ app.post('/schedules', async (req, res) => {
     }
 
     // Inserir o horário no banco de dados
-    await db.query('INSERT INTO schedules (secretary_id, start_time, end_time) VALUES (?, ?, ?)', [secretary_id, start_time, end_time]);
+    await db.query('INSERT INTO available_times (secretary_id, start_time, end_time) VALUES (?, ?, ?)', [secretary_id, start_time, end_time]);
     res.status(201).json({ message: 'Horário cadastrado com sucesso!' });
   } catch (error) {
     console.error('Erro ao cadastrar horário:', error);
@@ -518,7 +523,17 @@ app.post('/appointments', async (req, res) => {
   }
 
   try {
-    // Aqui você deve inserir o agendamento na tabela correspondente
+    // Verifica se o horário já foi ocupado
+    const [existingAppointment] = await db.query(
+      'SELECT * FROM appointments WHERE secretary_id = ? AND appointment_date = ? AND appointment_time = ?',
+      [secretary_id, date, time]
+    );
+
+    if (existingAppointment.length > 0) {
+      return res.status(409).json({ message: 'Horário já está ocupado.' });
+    }
+
+    // Inserir o agendamento no banco de dados
     await db.query(
       'INSERT INTO appointments (secretary_id, appointment_date, appointment_time, email) VALUES (?, ?, ?, ?)',
       [secretary_id, date, time, email]
@@ -548,6 +563,57 @@ app.get('/available-dates', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erro ao buscar datas disponíveis.' });
+  }
+});
+
+// rota para salvar um agendamento
+app.post('/schedule-appointment', async (req, res) => {
+  const { userEmail, secretaryId, date, startTime, endTime } = req.body;
+
+  if (!userEmail || !secretaryId || !date || !startTime || !endTime) {
+    return res.status(400).json({ message: 'Dados incompletos para o agendamento' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      'INSERT INTO appointments (user_email, secretary_id, date, start_time, end_time) VALUES (?, ?, ?, ?, ?)',
+      [userEmail, secretaryId, date, startTime, endTime]
+    );
+    res.status(201).json({ message: 'Agendamento realizado com sucesso!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao salvar o agendamento', error });
+  }
+});
+
+// rota para obter os agendamentos de um usuário
+app.get('/my-appointments', async (req, res) => {
+  const { userEmail } = req.query;
+
+  try {
+    const [appointments] = await db.execute(
+      'SELECT * FROM appointments WHERE user_email = ?',
+      [userEmail]
+    );
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar agendamentos', error });
+  }
+});
+
+// rota para cancelar um agendamento
+app.delete('/cancel-appointment/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await db.execute('DELETE FROM appointments WHERE id = ?', [id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: 'Agendamento cancelado com sucesso!' });
+    } else {
+      res.status(404).json({ message: 'Agendamento não encontrado' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao cancelar o agendamento', error });
   }
 });
 
