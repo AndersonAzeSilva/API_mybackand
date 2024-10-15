@@ -44,7 +44,7 @@ function validateUserData(data) {
 
 // Rota para registrar um novo usuário
 app.post('/register', async (req, res) => {
-  const { nome, email, senha, cpf, telefone, endereco, isAdmin } = req.body;
+  const { nome, email, senha, cpf, telefone, endereco, isAdmin, matricula } = req.body;
 
   if (!validateUserData(req.body)) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
@@ -53,8 +53,10 @@ app.post('/register', async (req, res) => {
   try {
     const hashedSenha = await bcrypt.hash(senha, 10);
     const nivelUsuario = isAdmin ? 1 : 2; // Converte isAdmin para nível de usuário
-    const sql = 'INSERT INTO usuarios (nome, email, senha, cpf, telefone, endereco, nivel) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    await db.query(sql, [nome, email, hashedSenha, cpf, telefone, endereco, nivelUsuario]);
+
+    // Atualizando a consulta SQL para incluir a coluna matricula
+    const sql = 'INSERT INTO usuarios (nome, email, senha, cpf, telefone, endereco, nivel, matricula) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    await db.query(sql, [nome, email, hashedSenha, cpf, telefone, endereco, nivelUsuario, matricula]);
 
     res.status(201).json({ message: 'Usuário registrado com sucesso!' });
   } catch (error) {
@@ -63,6 +65,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Erro ao registrar usuário no banco de dados.' });
   }
 });
+
 
 // Rota para login de usuário
 app.post('/login', async (req, res) => {
@@ -113,8 +116,61 @@ app.get('/usuarios', async (req, res) => {
     res.json(results);
   } catch (err) {
     console.error('Erro ao executar a query:', err);
-    log(`Erro ao executar a query: ${err.message}`);
     res.status(500).json({ error: 'Erro ao obter dados.' });
+  }
+});
+
+// Rota para excluir um usuário
+app.delete('/usuarios/:id', async (req, res) => {
+  const { id } = req.params; // Obtém o ID do usuário a ser excluído
+
+  try {
+    const [result] = await db.query('DELETE FROM usuarios WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    res.status(200).json({ message: 'Usuário excluído com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao executar a query:', err);
+    res.status(500).json({ error: 'Erro ao excluir usuário.' });
+  }
+});
+
+// Rota para obter dados do usuário pelo e-mail
+app.get('/usuario/email/:email', async (req, res) => {
+  try {
+      const { email } = req.params; 
+      const usuario = await Usuario.findOne({ where: { email } });
+
+      console.log(usuario); // Log para verificar o que está sendo retornado
+
+      if (!usuario) {
+          return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+      res.json(usuario);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Erro ao carregar os dados do usuário." });
+  }
+});
+
+// Rota para atualizar os dados do usuário pelo e-mail
+app.put('/usuario/email/:email', async (req, res) => {
+  try {
+      const { email } = req.params;
+      const [updated] = await Usuario.update(req.body, {
+          where: { email }
+      });
+
+      if (!updated) {
+          return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+      res.status(200).json({ message: "Dados atualizados com sucesso." });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Erro ao atualizar os dados do usuário." });
   }
 });
 
