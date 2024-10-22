@@ -1,6 +1,6 @@
 // incidenteController.js
 
-const db = require('../config/database');
+const db = require('../config/db');
 
 //////////////////////////////////////////////////////////////////////////////////////
 // Função para criar um novo incidente

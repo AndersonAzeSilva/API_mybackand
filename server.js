@@ -1,7 +1,8 @@
+// Importando os módulos necessários
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { initializeDb } = require('./config/db');
+const { initializeDb } = require('./config/db'); // Função para inicializar o banco de dados
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
@@ -12,13 +13,13 @@ require('dotenv').config();
 
 const app = express();
 
-// Usando o port definido no .env ou a porta padrão 3000
+// Usando a porta definida no .env ou a porta padrão 3000
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json()); // Para analisar o corpo da requisição em JSON
-app.use(express.json());
+app.use(express.json()); // Para analisar o corpo da requisição em JSON
 
 // Inicializa o banco de dados
 initializeDb();

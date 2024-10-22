@@ -1,35 +1,83 @@
-const Secretary = require('../models/Secretary');
+const Secretary = require('../models/secretaryModel'); 
 const db = require('../config/db'); // Importando a conexão com o banco de dados
 
+// Criar um novo secretário
 exports.createSecretary = async (req, res) => {
-  const { name, email, address, phone, profileImage, availableTimes } = req.body;
+    const { name, email } = req.body; // Exemplo de campos
 
-  if (!name || !email || !address || !phone || !availableTimes || availableTimes.length === 0) {
-    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-  }
+    if (!name || !email) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+    }
 
-  try {
-    const [secretaryResult] = await Secretary.create(name, email, address, phone, profileImage);
-    const secretaryId = secretaryResult.insertId;
-    
-    // Inserir os horários disponíveis...
-    
-    res.status(201).json({ id: secretaryId, name, email, address, phone, profileImage });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erro ao cadastrar a secretária' });
-  }
+    try {
+        const [result] = await db.execute(
+            'INSERT INTO secretaries (name, email) VALUES (?, ?)',
+            [name, email]
+        );
+        res.status(201).json({ message: 'Secretário criado com sucesso!', id: result.insertId });
+    } catch (error) {
+        console.error('Erro ao criar secretário:', error);
+        res.status(500).json({ message: 'Erro ao criar secretário.' });
+    }
 };
 
-// Listar as secretárias
+// Listar todos os secretários
 exports.getAllSecretaries = async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM secretaries');
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao buscar secretárias' });
-  }
+    try {
+        const [rows] = await db.query('SELECT * FROM secretaries');
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar secretários' });
+    }
 };
 
-// Outros métodos como listSecretaries...
+// Obter um secretário por ID
+exports.getSecretaryById = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [rows] = await db.execute('SELECT * FROM secretaries WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Secretário não encontrado.' });
+        }
+        res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error('Erro ao obter secretário:', error);
+        res.status(500).json({ message: 'Erro ao obter secretário.' });
+    }
+};
+
+// Atualizar um secretário
+exports.updateSecretary = async (req, res) => {
+    const { id } = req.params;
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+    }
+
+    try {
+        await db.execute('UPDATE secretaries SET name = ?, email = ? WHERE id = ?', [name, email, id]);
+        res.status(200).json({ message: 'Secretário atualizado com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar secretário:', error);
+        res.status(500).json({ message: 'Erro ao atualizar secretário.' });
+    }
+};
+
+// Excluir um secretário
+exports.deleteSecretary = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await db.execute('DELETE FROM secretaries WHERE id = ?', [id]);
+        if (result[0].affectedRows === 0) {
+            return res.status(404).json({ message: 'Secretário não encontrado.' });
+        }
+        res.status(200).json({ message: 'Secretário excluído com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao excluir secretário:', error);
+        res.status(500).json({ message: 'Erro ao excluir secretário.' });
+    }
+};

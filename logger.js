@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
+// Define o caminho do arquivo de log
 const logFilePath = path.join(__dirname, 'logs', 'app.log');
 
 // Função para escrever logs
@@ -10,8 +11,9 @@ const log = (message) => {
     const logMessage = `${timestamp} - ${message}\n`;
 
     // Cria a pasta 'logs' se não existir
-    if (!fs.existsSync(path.join(__dirname, 'logs'))) {
-        fs.mkdirSync(path.join(__dirname, 'logs'));
+    const logsDirectory = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDirectory)) {
+        fs.mkdirSync(logsDirectory);
     }
 
     // Grava a mensagem no arquivo
@@ -22,4 +24,5 @@ const log = (message) => {
     });
 };
 
+// Exporta a função de log
 module.exports = { log };

@@ -2,13 +2,14 @@ const jwt = require('jsonwebtoken');
 const secretKey = process.env.JWT_SECRET || 'secret_key'; // Defina sua chave secreta de JWT no .env
 const db = require('../config/db'); // Importando a conexão com o banco de dados
 
-console.log('Token recebido:', token);
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Middleware para verificar se o usuário está autenticado
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 exports.verifyToken = (req, res, next) => {
-  const token = req.headers['authorization'];
+  const token = req.headers['authorization']; // Aqui está a definição da variável token
+
+  // Log para depuração
+  console.log('Token recebido:', token);
 
   if (!token) {
     return res.status(403).json({ message: 'Token não fornecido.' });
@@ -32,10 +33,8 @@ exports.verifyToken = (req, res, next) => {
 exports.verifyAdmin = (req, res, next) => {
   // Presume-se que no token decodificado haja uma propriedade `isAdmin` que defina o nível de acesso
   if (req.user && req.user.isAdmin) {
-    return next();
+    next();
   } else {
     return res.status(403).json({ message: 'Acesso negado. Requer privilégios de administrador.' });
   }
 };
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////

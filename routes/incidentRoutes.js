@@ -1,36 +1,26 @@
-// incidentRoutes.js
-
 const express = require('express');
-const incidentController = require('../controllers/incidentController'); // Ajuste o caminho conforme necessário
-const authMiddleware = require('../middlewares/authMiddleware'); // Inclua o middleware de autenticação
-
 const router = express.Router();
+const {
+    createIncident,
+    getAllIncidents,
+    getIncidentById,
+    updateIncident,
+    deleteIncident
+} = require('../controllers/incidentController'); // Certifique-se de que as funções estão corretamente importadas
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Rota para criar um novo incidente
-/////////////////////////////////////////////////////////////////////////////////////////////
-router.post('/', authMiddleware, incidentController.createIncident);
+// Rota para criar um incidente
+router.post('/', createIncident);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Rota para obter todos os incidentes
-/////////////////////////////////////////////////////////////////////////////////////////////
-router.get('/', authMiddleware, incidentController.getAllIncidents);
+// Rota para listar todos os incidentes
+router.get('/', getAllIncidents);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Rota para obter um incidente específico pelo ID
-/////////////////////////////////////////////////////////////////////////////////////////////
-router.get('/:id', authMiddleware, incidentController.getIncidentById);
+// Rota para buscar um incidente específico pelo ID
+router.get('/:id', getIncidentById);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Rota para atualizar um incidente pelo ID
-/////////////////////////////////////////////////////////////////////////////////////////////
-router.put('/:id', authMiddleware, incidentController.updateIncident);
+// Rota para atualizar um incidente
+router.put('/:id', updateIncident);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Rota para deletar um incidente pelo ID
-/////////////////////////////////////////////////////////////////////////////////////////////
-router.delete('/:id', authMiddleware, incidentController.deleteIncident);
+// Rota para excluir um incidente
+router.delete('/:id', deleteIncident);
 
 module.exports = router;
-
-/////////////////////////////////////////////////////////////////////////////////////////////
