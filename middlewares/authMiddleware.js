@@ -38,3 +38,5 @@ exports.verifyAdmin = (req, res, next) => {
     return res.status(403).json({ message: 'Acesso negado. Requer privilégios de administrador.' });
   }
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////

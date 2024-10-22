@@ -1,13 +1,53 @@
-// secretaryModel.js
-
 const db = require('../config/db'); // Importando a conexão com o banco de dados
 
-// Aqui você pode adicionar funções para interagir com a tabela de secretárias
 module.exports = {
-  // Exemplo: função para buscar todas as secretárias
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Função para buscar todas as secretárias
   findAll: async () => {
     const [rows] = await db.query('SELECT * FROM secretaries');
     return rows;
   },
-  // Adicione mais funções conforme necessário
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Função para buscar uma secretária por ID
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  findById: async (id) => {
+    const [rows] = await db.query('SELECT * FROM secretaries WHERE id = ?', [id]);
+    return rows[0]; // Retorna a secretária ou undefined
+  },
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Função para criar uma nova secretária
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  create: async (name, email) => {
+    const [result] = await db.execute(
+      'INSERT INTO secretaries (name, email) VALUES (?, ?)',
+      [name, email]
+    );
+    return result.insertId; // Retorna o ID da secretária criada
+  },
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Função para atualizar uma secretária
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  update: async (id, name, email) => {
+    const [result] = await db.execute(
+      'UPDATE secretaries SET name = ?, email = ? WHERE id = ?',
+      [name, email, id]
+    );
+    return result.affectedRows; // Retorna o número de linhas afetadas
+  },
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Função para deletar uma secretária
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  delete: async (id) => {
+    const [result] = await db.execute(
+      'DELETE FROM secretaries WHERE id = ?',
+      [id]
+    );
+    return result.affectedRows; // Retorna o número de linhas afetadas
+  },
 };
+///////////////////////////////////////////////////////////////////////////////////////////////////////

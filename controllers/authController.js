@@ -1,19 +1,39 @@
 // authController.js
 
 const db = require('../config/db'); // Importando a conexão com o banco de dados
-const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt'); // Para hashing de senhas
+const jwt = require('jsonwebtoken'); // Para gerar tokens JWT
 
-// Função de login
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Login
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  // Autenticação do usuário (você deve ajustar isso de acordo com seu sistema)
-  const user = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+    }
 
-  if (user.length === 0 || user[0].password !== password) {
-    return res.status(401).json({ message: 'Credenciais inválidas.' });
-  }
+    try {
+        // Exemplo de verificação de usuário
+        const [user] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+        if (user.length === 0) {
+            return res.status(401).json({ message: 'Usuário não encontrado.' });
+        }
 
-  const token = jwt.sign({ id: user[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-  res.status(200).json({ token });
+        // Verifica a senha
+        const isMatch = await bcrypt.compare(password, user[0].password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Senha incorreta.' });
+        }
+
+        // Gera um token JWT
+        const token = jwt.sign({ id: user[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        res.status(200).json({ message: 'Login bem-sucedido!', token });
+    } catch (error) {
+        console.error('Erro no login:', error);
+        res.status(500).json({ message: 'Erro ao realizar login.' });
+    }
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////

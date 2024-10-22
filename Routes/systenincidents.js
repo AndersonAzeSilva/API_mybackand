@@ -1,10 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Função para validar dados de ocorrência
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 function validateIncidentData(data) {
     const { protocolNumber, title, description, type, date, time, status } = data;
     return protocolNumber && title && description && type && date && time && status;
 }
-  
+///////////////////////////////////////////////////////////////////////////////////////////////////////  
 // Rota para registrar uma nova ocorrência
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 app.post('/incidents', async (req, res) => {
     if (!validateIncidentData(req.body)) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
@@ -13,7 +16,7 @@ app.post('/incidents', async (req, res) => {
     const { protocolNumber, title, description, type, date, time, status, images, assignedTo } = req.body;
 
     try {
-        // Verifica se a ocorrência já existe
+        // Verifica se a ocorrência já existe no banco de dados
         const [existing] = await db.query('SELECT * FROM incidents WHERE protocolNumber = ?', [protocolNumber]);
 
         if (existing.length > 0) {
@@ -92,7 +95,9 @@ app.put('/incidents/:protocolNumber', async (req, res) => {
     }
 });
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rota para obter todas as ocorrências
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 app.get('/incidents', async (req, res) => {
     try {
         const [results] = await db.query('SELECT * FROM incidents');
@@ -112,7 +117,9 @@ app.get('/incidents', async (req, res) => {
     }
 });
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rota para excluir uma ocorrência
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 app.delete('/incidents/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -131,3 +138,5 @@ app.delete('/incidents/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro ao excluir ocorrência no banco de dados.' });
     }
 });
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
