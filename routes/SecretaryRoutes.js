@@ -1,11 +1,14 @@
 const express = require('express');
-const SecretaryController = require('../controllers/SecretaryController');
-const db = require('../config/db');
-
 const router = express.Router();
+const secretaryController = require('../controllers/secretaryController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
-router.get('/secretaries', SecretaryController.listSecretaries);
-router.post('/schedules', SecretaryController.createSchedule);
-router.get('/available-times', SecretaryController.getAvailableTimes);
+// Rota para criar uma nova secretária
+router.post('/', authMiddleware, secretaryController.createSecretary);
+
+// Rota para listar todas as secretárias
+router.get('/', authMiddleware, secretaryController.getAllSecretaries);
+
+// Outras rotas relacionadas a secretárias...
 
 module.exports = router;

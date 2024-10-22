@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
@@ -9,12 +11,16 @@ const googleClient = new OAuth2Client('SEU_CLIENT_ID_AQUI');
 const app = express();
 const port = 3000;
 
+const router = express.Router(); // Crie o roteador
+
+app.use(express.json()); // Para que o Express entenda JSON no corpo das requisições
+
 // Configuração da conexão com o banco de dados
 const dbConfig = {
   host: 'localhost',
   user: 'root',
   password: '', // Coloque sua senha aqui
-  database: 'appvozativa'
+  database: 'dbvozativa'
 };
 
 let db;
@@ -138,40 +144,83 @@ app.delete('/usuarios/:id', async (req, res) => {
   }
 });
 
-// Rota para obter dados do usuário pelo e-mail
-app.get('/usuario/email/:email', async (req, res) => {
+// Rota para buscar usuário pelo e-mail
+router.get('/usuario/email/:email', async (req, res) => {
+  const email = req.params.email;
+
   try {
-      const { email } = req.params; 
-      const usuario = await Usuario.findOne({ where: { email } });
+    const [rows] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
 
-      console.log(usuario); // Log para verificar o que está sendo retornado
-
-      if (!usuario) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-      }
-      res.json(usuario);
+    if (rows.length > 0) {
+      res.json(rows[0]); // Retorna os dados do usuário
+    } else {
+      res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Erro ao carregar os dados do usuário." });
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao buscar o usuário.' });
   }
 });
 
-// Rota para atualizar os dados do usuário pelo e-mail
-app.put('/usuario/email/:email', async (req, res) => {
-  try {
-      const { email } = req.params;
-      const [updated] = await Usuario.update(req.body, {
-          where: { email }
-      });
+// Rota para atualizar usuário pelo e-mail
+router.put('/usuario/email/:email', async (req, res) => {
+  const email = req.params.email;
+  const { nome, telefone, cpf, endereco, senha, matricula, isAdmin } = req.body;
 
-      if (!updated) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-      }
-      res.status(200).json({ message: "Dados atualizados com sucesso." });
+  try {
+    // Verifica se o usuário existe
+    const [userRows] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+
+    // Hash da nova senha, se fornecida
+    let hashedSenha = senha;
+    if (senha) {
+      const salt = await bcrypt.genSalt(10);
+      hashedSenha = await bcrypt.hash(senha, salt);
+    }
+
+    // Atualiza os dados do usuário no banco de dados
+    const result = await db.query(
+      `UPDATE usuarios SET nome = ?, telefone = ?, cpf = ?, endereco = ?, senha = ?, matricula = ?, isAdmin = ? WHERE email = ?`,
+      [nome, telefone, cpf, endereco, hashedSenha, matricula, isAdmin, email]
+    );
+
+    if (result[0].affectedRows > 0) {
+      res.json({ message: 'Dados do usuário atualizados com sucesso!' });
+    } else {
+      res.status(400).json({ message: 'Nenhuma alteração foi feita nos dados do usuário.' });
+    }
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Erro ao atualizar os dados do usuário." });
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao atualizar os dados do usuário.' });
   }
+});
+
+// Configura o armazenamento para onde os arquivos serão salvos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      cb(null, 'uploads/'); // Pasta onde as imagens serão salvas
+  },
+  filename: (req, file, cb) => {
+      cb(null, Date.now() + path.extname(file.originalname)); // Nome único para cada arquivo
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Rota para fazer o upload da imagem
+app.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+      return res.status(400).send({ error: 'Nenhuma imagem enviada' });
+  }
+
+  const imageUrl = `https://seu-dominio.com/uploads/${req.file.filename}`;
+  
+  // Salve imageUrl no banco de dados (dependerá da sua lógica)
+  res.send({ url: imageUrl });
 });
 
 // Função para validar dados de ocorrência
@@ -308,102 +357,6 @@ app.delete('/incidents/:id', async (req, res) => {
   }
 });
 
-// Rota para criar um chamado
-app.post('/chamados', async (req, res) => {
-  const { titulo, descricao, usuarioId } = req.body;
-
-  if (!titulo || !descricao) {
-    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
-  }
-
-  try {
-    const sql = 'INSERT INTO chamados (titulo, descricao, usuarioId) VALUES (?, ?, ?)';
-    const [result] = await db.query(sql, [titulo, descricao, usuarioId]);
-    res.status(201).json({ id: result.insertId });
-  } catch (error) {
-    console.error('Erro ao registrar chamado:', error);
-    log(`Erro ao registrar chamado: ${error.message}`);
-    res.status(500).json({ error: 'Erro ao registrar chamado no banco de dados.' });
-  }
-});
-
-// Rota para buscar todos os chamados
-app.get('/chamados', async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM chamados');
-    res.json(rows);
-  } catch (error) {
-    console.error('Erro ao buscar chamados:', error);
-    log(`Erro ao buscar chamados: ${error.message}`);
-    res.status(500).json({ error: 'Erro ao buscar chamados no banco de dados.' });
-  }
-});
-
-// Rota para atualizar um chamado
-app.put('/chamados/:id', async (req, res) => {
-  const { id } = req.params;
-  const { titulo, descricao } = req.body;
-
-  if (!titulo || !descricao) {
-    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
-  }
-
-  try {
-    const sql = 'UPDATE chamados SET titulo = ?, descricao = ? WHERE id = ?';
-    const [result] = await db.query(sql, [titulo, descricao, id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Chamado não encontrado.' });
-    }
-
-    res.json({ message: 'Chamado atualizado com sucesso!' });
-  } catch (error) {
-    console.error('Erro ao atualizar chamado:', error);
-    log(`Erro ao atualizar chamado: ${error.message}`);
-    res.status(500).json({ error: 'Erro ao atualizar chamado no banco de dados.' });
-  }
-});
-
-// Rota para excluir um chamado
-app.delete('/chamados/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const sql = 'DELETE FROM chamados WHERE id = ?';
-    const [result] = await db.query(sql, [id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Chamado não encontrado.' });
-    }
-
-    res.json({ message: 'Chamado excluído com sucesso!' });
-  } catch (error) {
-    console.error('Erro ao excluir chamado:', error);
-    log(`Erro ao excluir chamado: ${error.message}`);
-    res.status(500).json({ error: 'Erro ao excluir chamado no banco de dados.' });
-  }
-});
-
-// Rota para exportar ocorrências para CSV
-app.get('/export', async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM incidents');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=ocorrencias.csv');
-
-    const header = Object.keys(rows[0]).join(',') + '\n';
-    const csv = rows.map(row => {
-      return Object.values(row).join(',');
-    }).join('\n');
-
-    res.send(header + csv);
-  } catch (error) {
-    console.error('Erro ao exportar ocorrências:', error);
-    log(`Erro ao exportar ocorrências: ${error.message}`);
-    res.status(500).json({ error: 'Erro ao exportar ocorrências.' });
-  }
-});
 /////////////////////////////////////////////////////////////////////////////////////////
 // Rota para login com Google
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -673,6 +626,7 @@ app.delete('/cancel-appointment/:id', async (req, res) => {
   }
 });
 
+app.use('/api', router); 
 
 // Inicializando o servidor
 const PORT = process.env.PORT || 3000;

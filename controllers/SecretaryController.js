@@ -1,47 +1,35 @@
 const Secretary = require('../models/Secretary');
+const db = require('../config/db'); // Importando a conexão com o banco de dados
 
-const SecretaryController = {
-  async listSecretaries(req, res) {
-    try {
-      const secretaries = await Secretary.getAllSecretaries();
-      res.status(200).json(secretaries);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erro ao buscar secretárias' });
-    }
-  },
+exports.createSecretary = async (req, res) => {
+  const { name, email, address, phone, profileImage, availableTimes } = req.body;
 
-  async createSchedule(req, res) {
-    const { secretary_id, start_time, end_time } = req.body;
+  if (!name || !email || !address || !phone || !availableTimes || availableTimes.length === 0) {
+    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+  }
 
-    if (!secretary_id || !start_time || !end_time) {
-      return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-    }
-
-    try {
-      await Secretary.createSchedule(secretary_id, start_time, end_time);
-      res.status(201).json({ message: 'Horário cadastrado com sucesso!' });
-    } catch (error) {
-      console.error('Erro ao cadastrar horário:', error);
-      res.status(500).json({ message: 'Erro ao cadastrar horário.' });
-    }
-  },
-
-  async getAvailableTimes(req, res) {
-    const { date, secretaryId } = req.query;
-
-    if (!date || !secretaryId) {
-      return res.status(400).json({ message: 'Data e ID da secretária são obrigatórios.' });
-    }
-
-    try {
-      const times = await Secretary.getAvailableTimes(secretaryId, date);
-      res.status(200).json(times);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Erro ao buscar horários disponíveis' });
-    }
+  try {
+    const [secretaryResult] = await Secretary.create(name, email, address, phone, profileImage);
+    const secretaryId = secretaryResult.insertId;
+    
+    // Inserir os horários disponíveis...
+    
+    res.status(201).json({ id: secretaryId, name, email, address, phone, profileImage });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao cadastrar a secretária' });
   }
 };
 
-module.exports = SecretaryController;
+// Listar as secretárias
+exports.getAllSecretaries = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM secretaries');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao buscar secretárias' });
+  }
+};
+
+// Outros métodos como listSecretaries...

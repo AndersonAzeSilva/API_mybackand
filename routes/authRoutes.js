@@ -1,9 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-const db = require('../config/db');
+// authRoutes.js
 
-router.post('/google', authController.loginWithGoogle);
-// Adicione outras rotas de autenticação conforme necessário.
+const express = require('express');
+const authController = require('../controllers/authController');
+
+const router = express.Router();
+
+// Rota para realizar o login
+router.post('/login', authController.login);
 
 module.exports = router;

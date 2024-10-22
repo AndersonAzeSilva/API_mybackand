@@ -1,61 +1,79 @@
-const bcrypt = require('bcrypt');
 const userModel = require('../models/userModel');
 
-// Função de registro de usuário
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Função para registrar um usuário
+/////////////////////////////////////////////////////////////////////////////////////////////
 async function registerUser(req, res) {
-  const { nome, email, senha, cpf, telefone, endereco, isAdmin } = req.body;
-
-  // Validação de dados
-  if (!nome || !email || !senha || !cpf || !telefone || !endereco) {
-    return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
-  }
-
   try {
-    const hashedSenha = await bcrypt.hash(senha, 10);
-    const nivel = isAdmin ? 1 : 2;
-    await userModel.createUser({ nome, email, senha: hashedSenha, cpf, telefone, endereco, nivel });
-    res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+    const userData = req.body;
+    const result = await userModel.createUser(userData);
+    res.status(201).json({ message: 'Usuário registrado com sucesso!', result });
   } catch (error) {
-    console.error('Erro ao registrar usuário:', error);
-    res.status(500).json({ error: 'Erro ao registrar usuário no banco de dados.' });
+    res.status(500).json({ message: 'Erro ao registrar usuário', error });
   }
 }
 
-// Função de login
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Função para atualizar o perfil do usuário
+/////////////////////////////////////////////////////////////////////////////////////////////
+async function updateProfile(req, res) {
+  const userId = req.params.id;
+  const data = req.body;
+  try {
+    const result = await userModel.updateProfile(userId, data);
+    res.status(200).json({ message: 'Perfil atualizado com sucesso!', result });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao atualizar perfil', error });
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Função para login
+/////////////////////////////////////////////////////////////////////////////////////////////
 async function loginUser(req, res) {
   const { email, senha } = req.body;
-
-  if (!email || !senha) {
-    return res.status(400).json({ error: 'Email e senha são obrigatórios!' });
-  }
-
   try {
-    const user = await userModel.getUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    const user = await userModel.findUserByEmail(email);
+    if (user && user.senha === senha) { // Adicione uma verificação mais segura para senhas
+      res.status(200).json({ message: 'Login bem-sucedido!', user });
+    } else {
+      res.status(401).json({ message: 'Credenciais inválidas' });
     }
-
-    const isMatch = await bcrypt.compare(senha, user.senha);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Email ou senha inválidos.' });
-    }
-
-    res.json({
-      message: 'Login realizado com sucesso!',
-      user: {
-        nome: user.nome,
-        email: user.email,
-        nivel: user.nivel,
-        isAdmin: user.nivel === 1,
-      }
-    });
   } catch (error) {
-    console.error('Erro ao fazer login:', error);
-    res.status(500).json({ error: 'Erro ao acessar o banco de dados.' });
+    res.status(500).json({ message: 'Erro ao fazer login', error });
   }
 }
 
-module.exports = {
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Função para obter todos os usuários
+/////////////////////////////////////////////////////////////////////////////////////////////
+async function getAllUsers(req, res) {
+  try {
+    const users = await userModel.getAllUsers();
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao obter usuários', error });
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Função para deletar um usuário
+/////////////////////////////////////////////////////////////////////////////////////////////
+async function deleteUser(req, res) {
+  const userId = req.params.id;
+  try {
+    await userModel.deleteUser(userId);
+    res.status(200).json({ message: 'Usuário deletado com sucesso!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao deletar usuário', error });
+  }
+}
+
+// Exportando as funções
+module.exports = { 
   registerUser,
-  loginUser
+  updateProfile,
+  loginUser,
+  getAllUsers,
+  deleteUser,
 };
